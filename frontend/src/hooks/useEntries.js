@@ -11,46 +11,49 @@ export function useEntries(page, limit) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  const readEntries = async (signal) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await entryService.fetchEntries({ 
+          page, limit, signal
+      });
+      setEntries(data.entries);
+      setCount(data.count);
+    } catch (err) {
+      if (err.name !== "AbortError") {
+        setError(err);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     const controller = new AbortController();
-    const load = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const data = await entryService.fetchEntries({ 
-            page, limit, signal: controller.signal
-        });
-        setEntries(data.entries);
-        setCount(data.count);
-      } catch (err) {
-        if (err.name !== "AbortError") {
-          setError(err);
-        }
-      } finally {
-        setLoading(false);
-      }
-  };
-
-    load();
+    readEntries(controller.signal);
     return () => controller.abort();
   }, [page, limit]);
 
   const createEntry = async (entryData) => {
     const newEntry = await entryService.createEntry(entryData);
+    //instantly show the new entry
     setEntries((prev) => [newEntry, ...prev]);
-
+    setCount((prev) => prev + 1);
+    
+    //optional - sync with backend after
+    readEntries();
     return newEntry;
   };
 
   const updateEntry = async (id, entryData) => {
-    const updated = await entryService.updateEntry(id, entryData);
-    setEntries((prev) => prev.map((e) => (e._id === id ? updated : e)));
+    await entryService.updateEntry(id, entryData);
+    await readEntries();
   };
 
   const deleteEntry = async (id) => {
     await entryService.deleteEntry(id);
-    setEntries((prev) => prev.filter((e) => e._id !== id));
+    await readEntries();
   };
 
   return {
@@ -59,6 +62,7 @@ export function useEntries(page, limit) {
     error,
     count,
     createEntry,
+    readEntries,
     updateEntry,
     deleteEntry,
   };

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Button, Modal, ModalBody } from "flowbite-react";
 import { FilePlusCorner } from "lucide-react";
 import Header from "../components/Header";
@@ -9,8 +10,16 @@ import { useEntries } from "../hooks/useEntries";
 
 const DashBoard = () => {
   const [newEntriesModal, setNewEntriesModal] = useState(false);
+  const [_, setSearchParams] = useSearchParams();
   const { createEntry } = useEntries();
 
+  const handleCreate = async (formData) => {
+    await createEntry(formData);
+    //go to page 1 so the new item is visible
+     setSearchParams({ page: "1" });
+     setNewEntriesModal(false);
+     window.location.reload();//quick fix
+  }
   return (
     <>
       <div>
@@ -46,7 +55,7 @@ dark:hover:bg-primary-300/15 dark:hover:border-primary-200/35 cursor-pointer"
             <ModalBody>
               <EntryModal
                 mode="new"
-                persistEntry={createEntry}
+                persistEntry={handleCreate}
                 onClose={() => setNewEntriesModal(false)}
               />
             </ModalBody>
