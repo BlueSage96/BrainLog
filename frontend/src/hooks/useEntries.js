@@ -2,20 +2,24 @@
     Hook Layer (State + Side Effects)
     CRUD Operations
  */
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import * as entryService from "../services/entryService";
 
-export function useEntries() {
+export function useEntries(page, limit) {
   const [entries, setEntries] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [count, setCount] = useState(0);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const fetchEntries = useCallback(async (signal) => {
+  const readEntries = async (signal) => {
     try {
       setLoading(true);
       setError(null);
-      const data = await entryService.fetchEntries(signal);
-      setEntries(data);
+      const data = await entryService.fetchEntries({ 
+          page, limit, signal
+      });
+      setEntries(data.entries);
+      setCount(data.count);
     } catch (err) {
       if (err.name !== "AbortError") {
         setError(err);
@@ -23,37 +27,42 @@ export function useEntries() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  };
 
   useEffect(() => {
     const controller = new AbortController();
-    fetchEntries(controller.signal);
+    readEntries(controller.signal);
     return () => controller.abort();
-  }, [fetchEntries]);
+  }, [page, limit]);
 
   const createEntry = async (entryData) => {
     const newEntry = await entryService.createEntry(entryData);
+    //instantly show the new entry
     setEntries((prev) => [newEntry, ...prev]);
-
+    setCount((prev) => prev + 1);
+    
+    //optional - sync with backend after
+    readEntries();
     return newEntry;
   };
 
   const updateEntry = async (id, entryData) => {
-    const updated = await entryService.updateEntry(id, entryData);
-    setEntries((prev) => prev.map((e) => (e._id === id ? updated : e)));
+    await entryService.updateEntry(id, entryData);
+    await readEntries();
   };
 
   const deleteEntry = async (id) => {
     await entryService.deleteEntry(id);
-    setEntries((prev) => prev.filter((e) => e._id !== id));
+    await readEntries();
   };
 
   return {
     entries,
     loading,
     error,
-    fetchEntries,
+    count,
     createEntry,
+    readEntries,
     updateEntry,
     deleteEntry,
   };
