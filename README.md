@@ -4,7 +4,7 @@
 
 ## 🚀 Live Demo
 
-- **Frontend Live Site:** https://your-frontend-url.com  
+- **Frontend Live Site:** https://k-group-practicum-team6.vercel.app  
 - **Frontend Repo:** /frontend  
 - **Backend Repo:** /backend
 - **Mobile Repo:** /mobile
